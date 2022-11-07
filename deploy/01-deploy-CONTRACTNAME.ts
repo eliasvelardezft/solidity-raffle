@@ -4,13 +4,12 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { developmentChains, networkConfig } from "../helper-hardhat-config";
 import { verify } from "../utils/verify";
 
-// replace CONTRACTNAME with your contract name
-const deployCONTRACTNAME: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const deployRaffle: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 	const { deployments, getNamedAccounts } = hre;
 	const { deploy, log } = deployments;
 	const { owner } = await getNamedAccounts();
 
-	const CONTRACTNAME = await deploy("CONTRACTNAME", {
+	const raffle = await deploy("Raffle", {
 		from: owner,
 		log: true,
 		waitConfirmations: networkConfig[network.name]?.blockConfirmations || 0,
@@ -19,10 +18,10 @@ const deployCONTRACTNAME: DeployFunction = async (hre: HardhatRuntimeEnvironment
 	log("deployed!");
 
 	if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-		await verify(CONTRACTNAME.address, []);
+		await verify(raffle.address, []);
 	}
 
 	log("--------------");
 };
-export default deployCONTRACTNAME;
-deployCONTRACTNAME.tags = ["all"];
+export default deployRaffle;
+deployRaffle.tags = ["all"];
