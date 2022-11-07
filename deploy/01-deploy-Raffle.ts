@@ -1,4 +1,4 @@
-import { network } from "hardhat";
+import { ethers, network } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { developmentChains, networkConfig } from "../helper-hardhat-config";
@@ -9,7 +9,9 @@ const deployRaffle: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 	const { deploy, log } = deployments;
 	const { owner } = await getNamedAccounts();
 
+	const raffleEntranceFee = ethers.utils.parseEther("0.1");
 	const raffle = await deploy("Raffle", {
+		args: [raffleEntranceFee],
 		from: owner,
 		log: true,
 		waitConfirmations: networkConfig[network.name]?.blockConfirmations || 0,
