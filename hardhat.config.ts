@@ -40,9 +40,8 @@ const config: HardhatUserConfig = {
 	},
 	namedAccounts: {
 		owner: 0,
-		teamMember: 1,
-		funder1: 2,
-		funder2: 3,
+		participant1: 1,
+		participant2: 2,
 	},
 };
 
