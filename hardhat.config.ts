@@ -6,14 +6,17 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "hardhat-deploy";
 
-import {
-	GOERLI_CHAINID,
-	GOERLI_RPC_URL,
-	GOERLI_PRIVATE_KEY,
+const {
+	// localhost
 	LOCALHOST_RPC_URL,
+	// goerli
+	GOERLI_RPC_URL,
+	GOERLI_CHAINID,
+	GOERLI_PRIVATE_KEY,
+	// api keys
 	ETHERSCAN_API_KEY,
 	COINMARKETCAP_API_KEY,
-} from "./helper-hardhat-config";
+} = process.env;
 
 const config: HardhatUserConfig = {
 	defaultNetwork: "hardhat",
