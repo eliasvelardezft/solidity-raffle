@@ -1,4 +1,5 @@
 import { deployments, ethers, network } from "hardhat";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect, assert } from "chai";
 import { Raffle } from "../typechain-types/contracts/Raffle"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -9,7 +10,9 @@ describe("Raffle", () => {
 		owner: SignerWithAddress,
 		participant1: SignerWithAddress,
 		participant2: SignerWithAddress,
-		currentNetworkConfig: networkConfigItem;
+		currentNetworkConfig: networkConfigItem,
+		raffleEntranceFee: string,
+		raffleInterval: number;
 	beforeEach(async () => {
 		await deployments.fixture(["all"]);
 
@@ -19,11 +22,13 @@ describe("Raffle", () => {
 		raffle = await ethers.getContract("Raffle", owner);
 
 		currentNetworkConfig = networkConfig[network.name];
+		raffleEntranceFee = currentNetworkConfig.entranceFee!.toString();
+		raffleInterval = parseInt(currentNetworkConfig.interval!);
 	});
 	describe("constructor", async () => {
 		it("Sets constructor variables correctly", async () => {
 			const entranceFee = await raffle.getEntranceFee();
-			assert.equal(entranceFee.toString(), currentNetworkConfig.entranceFee!.toString());
+			assert.equal(entranceFee.toString(), raffleEntranceFee);
 
 			const keyHash = await raffle.getKeyHash();
 			assert.equal(keyHash.toString(), currentNetworkConfig.vrfKeyHash);
@@ -38,7 +43,9 @@ describe("Raffle", () => {
 			assert.equal(raffleState.toString(), "0");
 
 			const latestTimestamp = await raffle.getLatestTimeStamp();
-			const expectedLatestTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+			// subtract 1 because adding raffle as vrfCoordinatorV2Mock takes time
+			// TODO: CHECK THIS
+			const expectedLatestTimestamp = await time.latest() - 1;
 			assert.equal(latestTimestamp.toString(), expectedLatestTimestamp.toString());
 		});
 	});
@@ -48,6 +55,22 @@ describe("Raffle", () => {
 			await expect(raffle.enterRaffe({ value: sendValue })).to.be.revertedWithCustomError(
 				raffle,
 				"Raffle__NotEnoughETH"
+			);
+		});
+		it("Reverts with Raffle__NotOpen if raffle is not in Open state", async () => {
+			// enter so there are participants and balance available
+			await raffle.enterRaffe({ value: raffleEntranceFee })
+			
+			// pass time interval
+			await network.provider.send("evm_increaseTime", [raffleInterval + 1]);
+			await network.provider.send("evm_mine", []);
+
+			// performUpkeep requests the randomNumber and puts the raffle in CALCULATING state
+			await raffle.connect(owner).performUpkeep([]);
+
+			await expect(raffle.enterRaffe({ value: raffleEntranceFee })).to.be.revertedWithCustomError(
+				raffle,
+				"Raffle__NotOpen"
 			);
 		});
 		it("Adds address to participants array", async () => {
