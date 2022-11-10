@@ -19,6 +19,11 @@ describe("Raffle", () => {
 		await network.provider.send("evm_mine", []);
 	};
 
+	const enterAndIncreaseTime = async (time: number) => {
+		await raffle.enterRaffe({ value: raffleEntranceFee });
+		await increaseTimeAndMine(time);
+	};
+
 	beforeEach(async () => {
 		await deployments.fixture(["all"]);
 
@@ -64,11 +69,8 @@ describe("Raffle", () => {
 			);
 		});
 		it("Reverts with Raffle__NotOpen if raffle is not in Open state", async () => {
-			// enter so there are participants and balance available
-			await raffle.enterRaffe({ value: raffleEntranceFee });
-
-			// pass time interval
-			await increaseTimeAndMine(raffleInterval + 1);
+			// enter raffle so there is balance and participants and increase time
+			await enterAndIncreaseTime(raffleInterval + 1);
 
 			// performUpkeep requests the randomNumber and puts the raffle in CALCULATING state
 			await raffle.connect(owner).performUpkeep([]);
@@ -92,8 +94,8 @@ describe("Raffle", () => {
 	});
 	describe("checkUpkeep", () => {
 		it("Returns false if raffle is not in OPEN state", async () => {
-			await raffle.enterRaffe({ value: raffleEntranceFee });
-			await increaseTimeAndMine(raffleInterval + 1);
+			// enter raffle so there is balance and participants and increase time
+			await enterAndIncreaseTime(raffleInterval + 1);
 			await raffle.performUpkeep([]);
 
 			const { upkeepNeeded } = await raffle.callStatic.checkUpkeep([]);
@@ -127,9 +129,8 @@ describe("Raffle", () => {
 			assert.isFalse(upkeepNeeded);
 		});
 		it("Returns true if al needed conditions are met", async () => {
-			await raffle.enterRaffe({ value: raffleEntranceFee });
-
-			await increaseTimeAndMine(raffleInterval + 1);
+			// enter raffle so there is balance and participants and increase time
+			await enterAndIncreaseTime(raffleInterval + 1);
 
 			const participantsNum = await raffle.getNumberOfParticipants();
 			const balance = await ethers.provider.getBalance(raffle.address);
@@ -142,6 +143,48 @@ describe("Raffle", () => {
 			assert.equal(raffleState.toString(), "0"); // 0: OPEN, 1: CALCULATING
 
 			assert.isTrue(upkeepNeeded);
+		});
+	});
+	describe("performUpkeep", () => {
+		it("Reverts with Raffle__UpkeepNotNeeded if upkeepNeeded is false", async () => {
+			// checkupKeep is false because the time hasn't passed
+			// and there are no participants or balance
+			await expect(raffle.performUpkeep([])).to.be.revertedWithCustomError(
+				raffle,
+				"Raffle__UpkeepNotNeeded"
+			);
+		});
+		it("Changes raffleState from OPEN to CALCULATING", async () => {
+			// enter raffle so there is balance and participants and increase time
+			await enterAndIncreaseTime(raffleInterval + 1);
+
+			await raffle.performUpkeep([]);
+
+			const newRaffleState = await raffle.getRaffleState();
+
+			assert.equal(newRaffleState.toString(), "1");
+		});
+		it("calls vrfCoordinatorV2.requestRandomWords and creates requestId local variable", async () => {
+			// enter raffle so there is balance and participants and increase time
+			await enterAndIncreaseTime(raffleInterval + 1);
+
+			const txResponse = await raffle.performUpkeep([]);
+			const txReceipt = await txResponse.wait(1);
+
+			const requestId = txReceipt!.events![1].args!.requestId;
+
+			assert.isTrue(requestId.toNumber() > 0);
+		});
+		it("Emits RequestedRaffleWinner with param requestId (from the requestRandomWords call)", async () => {
+			// enter raffle so there is balance and participants and increase time
+			await enterAndIncreaseTime(raffleInterval + 1);
+
+			const txResponse = await raffle.performUpkeep([]);
+			const txReceipt = await txResponse.wait(1);
+
+			const requestId = txReceipt!.events![1].args!.requestId;
+
+			await expect(txResponse).to.emit(raffle, "RequestedRaffleWinner").withArgs(requestId);
 		});
 	});
 });
