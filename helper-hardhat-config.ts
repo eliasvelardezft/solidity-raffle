@@ -21,7 +21,7 @@ export const {
 } = process.env;
 
 // network config
-interface networkConfigItem {
+export interface networkConfigItem {
 	blockConfirmations?: number;
 	chainId?: number;
 	vrfSubscriptionAddress?: string;
@@ -34,7 +34,7 @@ interface networkConfigItem {
 	interval?: string;
 }
 
-interface networkConfigInfo {
+export interface networkConfigInfo {
 	[key: string]: networkConfigItem;
 }
 

@@ -1,14 +1,15 @@
-import { deployments, ethers } from "hardhat";
+import { deployments, ethers, network } from "hardhat";
 import { expect, assert } from "chai";
-import { Raffle } from "../typechain-types/Raffle";
+import { Raffle } from "../typechain-types/contracts/Raffle"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { RAFFLE_ENTRANCE_FEE } from "../raffle-constants";
+import { networkConfig, networkConfigItem } from "../helper-hardhat-config"
 
 describe("Raffle", () => {
 	let raffle: Raffle,
 		owner: SignerWithAddress,
 		participant1: SignerWithAddress,
-		participant2: SignerWithAddress;
+		participant2: SignerWithAddress,
+		currentNetworkConfig: networkConfigItem;
 	beforeEach(async () => {
 		await deployments.fixture(["all"]);
 
@@ -16,16 +17,34 @@ describe("Raffle", () => {
 		({ owner, participant1, participant2 } = accounts);
 
 		raffle = await ethers.getContract("Raffle", owner);
+
+		currentNetworkConfig = networkConfig[network.name];
 	});
 	describe("constructor", async () => {
-		it("Sets entranceFee", async () => {
+		it("Sets constructor variables correctly", async () => {
 			const entranceFee = await raffle.getEntranceFee();
-			assert.equal(entranceFee.toString(), RAFFLE_ENTRANCE_FEE.toString());
+			assert.equal(entranceFee.toString(), currentNetworkConfig.entranceFee!.toString());
+
+			const keyHash = await raffle.getKeyHash();
+			assert.equal(keyHash.toString(), currentNetworkConfig.vrfKeyHash);
+
+			const callbackGasLimit = await raffle.getCallbackGasLimit();
+			assert.equal(callbackGasLimit.toString(), currentNetworkConfig.vrfMaxGasLimit);
+
+			const interval = await raffle.getInterval();
+			assert.equal(interval.toString(), currentNetworkConfig.interval);
+
+			const raffleState = await raffle.getRaffleState();
+			assert.equal(raffleState.toString(), "0");
+
+			const latestTimestamp = await raffle.getLatestTimeStamp();
+			const expectedLatestTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+			assert.equal(latestTimestamp.toString(), expectedLatestTimestamp.toString());
 		});
 	});
 	describe("enterRaffle", async () => {
 		it("Reverts with Raffle__NotEnoughETH if value is less than entranceFee", async () => {
-			const sendValue = ethers.utils.parseEther("0.05");
+			const sendValue = ethers.utils.parseEther("0.005");
 			await expect(raffle.enterRaffe({ value: sendValue })).to.be.revertedWithCustomError(
 				raffle,
 				"Raffle__NotEnoughETH"
