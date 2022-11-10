@@ -50,6 +50,9 @@ const deployRaffle: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
 	if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
 		await verify(raffle.address, args);
+	} else {
+		const vrfCoordinatorV2Mock = await ethers.getContractAt("VRFCoordinatorV2Mock", vrfCoordinatorV2Address!)
+		await vrfCoordinatorV2Mock.addConsumer(subscriptionId, raffle.address)
 	}
 
 	log("--------------");
