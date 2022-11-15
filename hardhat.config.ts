@@ -45,6 +45,7 @@ const config: HardhatUserConfig = {
 		owner: 0,
 		participant1: 1,
 		participant2: 2,
+		participant3: 3,
 	},
 };
 

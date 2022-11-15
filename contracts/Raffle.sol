@@ -17,20 +17,20 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 		CALCULATING
 	}
 
-	uint256 private immutable i_entranceFee;
-	address payable[] private s_participants;
 	VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
 	bytes32 private immutable i_keyHash;
 	uint64 private immutable i_subscriptionId;
 	uint16 private constant REQUEST_CONFIRMATIONS = 3;
 	uint16 private constant NUM_WORDS = 1;
 	uint32 private immutable i_callbackGasLimit;
-	uint16 private immutable i_interval;
 	uint256 private s_latestTimestamp;
 
 	// raffle variables
+	uint256 private immutable i_entranceFee;
+	address payable[] private s_participants;
 	address private s_latestWinner;
 	RaffleState private s_raffleState;
+	uint16 private immutable i_interval;
 
 	event RaffleEntered(address indexed participant);
 	event RequestedRaffleWinner(uint256 indexed requestId);
@@ -65,10 +65,10 @@ contract Raffle is VRFConsumerBaseV2, AutomationCompatibleInterface {
 	 * @dev Chainlink keeper nodes call this function to know if
 	 * they need to call performUpkeep to pick the random winner
 	 * The following items need to be true in order for upkeepNeeded to be true
-	 * 1. Time interval has passed
-	 * 2. Raffle has at least 1 participant and some ETH in the balance
-	 * 3. The subscription is funded with LINK
-	 * 4. The raffle is in open state (not waiting for random number)
+	 * 1. The raffle is in open state (not waiting for random number)
+	 * 2. Time interval has passed
+	 * 3. Raffle has at least 1 participant
+	 * 4. There is some ETH in the balance
 	 */
 	function checkUpkeep(
 		bytes memory /* checkData */
